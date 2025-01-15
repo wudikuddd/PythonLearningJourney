@@ -13,8 +13,6 @@ client ---> 消息 --> Broker(消息队列) -----> 消息 ---> worker(celery运�
 并发任务10k以下的，直接使用redis
 并发任务10k以上，1000k以下的，直接使用RabbitMQ
 并发任务1000k以上的，直接使用RocketMQ
-
-启动worker和beat：celery -A celery_test worker -l INFO -c 2 -B
 """
 import time
 

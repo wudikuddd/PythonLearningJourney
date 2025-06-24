@@ -20,7 +20,7 @@ import time
 
 from celery import Celery
 
-app = Celery('celery_test',
+app = Celery('simple_use',
              broker='redis://localhost:6379/5'
              )
 app.conf.broker_connection_retry_on_startup = True
@@ -31,7 +31,7 @@ app.conf.timezone = "Asia/Shanghai"
 
 app.conf.beat_schedule = {
     'test_beat': {
-        'task': 'celery_test.test_beat',
+        'task': 'simple_use.test_beat',
         'schedule': 2,  # 每 2 秒运行
     },
 }

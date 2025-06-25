@@ -24,11 +24,19 @@
             func1(1)() # 执行函数
                 -> 2  # 打印内部存储变量xx的值
                 -> None  # 函数返回值
+
+语法糖 “@” 的奥义:
+
+    @decorator
+    def func():       -----相当于---->  func = decorator(func)
+        pass         
+    
+    执行被装饰后的函数: func() 实际上执行的是: decorator(func)()
 """ 
 from functools import wraps 
 
 
-# 1. 装饰器函数实现
+# 装饰器函数实现
 def simple_decorator(func):
 
     # @wrapper(func)  # wraps: 将传递给 `wraps（）` 的参数作为剩余参数传递给 `update_wrapper（）`。默认参数与 `update_wrapper（）` 的参数设置相同
@@ -46,23 +54,51 @@ def func_test1(x, y):
     print("func_test1 is running")
     return f"{x} + {y} = {x + y}"
 
-
+# 装饰函数
 # 语法糖 -> @: 标识着这是一个装饰器
 @simple_decorator
 def func_test2(x, y):
     print("func_test2 is running")
     return f"{x} + {y} = {x + y}"
 
+
+# 带参数的装饰器函数实现
+def decorator_with_params(*deco_args, **deco_kwargs):
+    def decorator(func):
+        
+        def wrapper(*args, **kwargs):
+            
+            # 使用参数
+            print(f'decorator_with_params params: {str(*deco_args)}, {str(dict(**deco_kwargs))}')
+
+            # 额外功能
+            print(f'wrapper is running')
+            
+            return func(*args, **kwargs)
+    
+        return wrapper
+    
+    return decorator
+
+
+# 装饰函数 - 使用带参数的装饰器
+@decorator_with_params("zhangsan", age=3)
+def func_test3(x, y):
+    print("func_test3 is running")
+    return f"{x} + {y} = {x + y}"
+
+
 def main():
     result = simple_decorator(func_test1)(1, 2)  # 结合原理，看懂这一步很重要.  注意！！！-> 这里的func_test2实际上执行的是wrapper
     print(result)
-
-    print(f"\n{'-'*10} 分割线 {'-'*10}\n")
 
     # @simple_decorator 可以理解为简化了:  func_test2 = simple_decorator(func_test2)
     result = func_test2(1, 2)  # 注意！！！-> 这里的func_test2实际上执行的是wrapper
     print(result)
 
+    # @decorator_with_params(params) 可以理解为简化了:  func_test3 = decorator_with_params(params)(func_test3)
+    result = func_test3(1, 2)
+    print(result)
 
 if __name__ == '__main__':
     main()

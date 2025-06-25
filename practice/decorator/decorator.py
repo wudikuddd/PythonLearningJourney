@@ -25,7 +25,8 @@
                 -> 2  # 打印内部存储变量xx的值
                 -> None  # 函数返回值
 
-语法糖 “@” 的奥义:
+语法糖 “@” 的奥义: 
+    - @func: 标识着func是一个装饰器
 
     @decorator
     def func():       -----相当于---->  func = decorator(func)
@@ -36,7 +37,7 @@
 from functools import wraps 
 
 
-# 装饰器函数实现
+# 1. 装饰器函数实现
 def simple_decorator(func):
 
     # @wrapper(func)  # wraps: 将传递给 `wraps（）` 的参数作为剩余参数传递给 `update_wrapper（）`。默认参数与 `update_wrapper（）` 的参数设置相同
@@ -55,14 +56,13 @@ def func_test1(x, y):
     return f"{x} + {y} = {x + y}"
 
 # 装饰函数
-# 语法糖 -> @: 标识着这是一个装饰器
 @simple_decorator
 def func_test2(x, y):
     print("func_test2 is running")
     return f"{x} + {y} = {x + y}"
 
 
-# 带参数的装饰器函数实现
+# 2. 带参数的装饰器函数实现
 def decorator_with_params(*deco_args, **deco_kwargs):
     def decorator(func):
         
@@ -81,11 +81,33 @@ def decorator_with_params(*deco_args, **deco_kwargs):
     return decorator
 
 
-# 装饰函数 - 使用带参数的装饰器
+# 装饰函数
 @decorator_with_params("zhangsan", age=3)
 def func_test3(x, y):
     print("func_test3 is running")
     return f"{x} + {y} = {x + y}"
+
+
+# 3. 类装饰器
+def clasx_decorator(cls):
+
+    def wrapper(*args, **kwargs):
+
+        # 额外功能
+        cls.__version__ = "1.0.0"
+
+        return cls(*args, **kwargs)
+
+    return wrapper
+ 
+
+# 装饰类
+@clasx_decorator
+class TestClasx:
+    def __init__(self, *args, **kwargs):
+        print("TestClasx is initing")
+        pass
+
 
 
 def main():
@@ -99,6 +121,9 @@ def main():
     # @decorator_with_params(params) 可以理解为简化了:  func_test3 = decorator_with_params(params)(func_test3)
     result = func_test3(1, 2)
     print(result)
+
+    test_clasx = TestClasx()
+    print(test_clasx.__version__)
 
 if __name__ == '__main__':
     main()

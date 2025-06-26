@@ -16,22 +16,53 @@ client ---> 消息 --> Broker(消息队列) -----> 消息 ---> worker(celery运�
 
 启动worker和beat:
 
-celery -A simple_use worker -l INFO -c 2 -B
+celery -A app worker -l INFO -c 2 -B
 
 """
 import time
 
 from celery import Celery
+from kombu import Queue, Exchange
 
-app = Celery('simple_use',
-             broker='redis://localhost:6379/5'
+app = Celery('app',
+             broker='redis://localhost:6379/5',
+             backend='redis://localhost:6379/6'
              )
 app.conf.broker_connection_retry_on_startup = True
 # 时区设置
 app.conf.enable_utc = False
 app.conf.timezone = "Asia/Shanghai"
 
+# default Queue
+app.conf.task_default_queue = 'default_app'
+# default routing_key
+app.conf.task_default_routing_key = 'task.default_app'
 
+# task_routes
+app.conf.task_routes = {
+    'practice.celery_use.simple_use.send_slow_task': {
+        'queue': 'default_app_slow',
+        'routing_key': 'app_slow.task.send_slow_task'
+    },
+}
+
+# task_queues
+app.conf.task_queues = (
+    # The non-AMQP backends like Redis or SQS don’t support exchanges,
+    # so they require the exchange to have the same name as the queue.
+    Queue(
+        'default_app',
+        exchange=Exchange('default_app', type='topic'),
+        routing_key='app.task.#',
+    ),
+    Queue(
+        'default_app_slow',
+        exchange=Exchange('default_app_slow', type='topic'),
+        routing_key='app_slow.task.#',
+    ),
+)
+
+# 定时任务
 app.conf.beat_schedule = {
     'test_beat': {
         'task': 'simple_use.test_beat',
@@ -57,7 +88,15 @@ def send_email():
 @app.task()
 def send_sms():
     print('start send sms')
-    time.sleep(5)
+    time.sleep(3)
+    return 'ok'
+
+
+
+@app.task()
+def send_slow_task():  # 测试耗时任务
+    print('start send slow_task')
+    time.sleep(50)
     return 'ok'
 
 

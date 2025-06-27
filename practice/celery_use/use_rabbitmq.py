@@ -49,12 +49,12 @@ app.conf.task_queues = (
     Queue(
         'default_app_name',
         exchange=Exchange('tasks.default_app_name', type='topic'),
-        routing_key='task.default_app_name.#',
+        routing_key='task.default_app_name.#',   # 要求前2个单词匹配
     ),
     Queue(
         'default_app_name_slow',
         exchange=Exchange('tasks.default_app_name_slow', type='topic'),
-        routing_key='task.app_name_slow.#',
+        routing_key='task.app_name_slow.#',  # 要求前2个单词匹配
     ),
 )
 

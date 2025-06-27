@@ -1,4 +1,5 @@
 """
+参考: https://docs.jinkan.org/docs/celery/getting-started/brokers/rabbitmq.html
 celery通过消息(任务)进行通信，
 celery通常使用一个叫Broker(中间人/消息中间件/消息队列/任务队列)来协助clients(任务的发出者/客户端)和worker(任务的处理者/工作进程)进行通信的.
 clients发出消息到任务队列中，broker将任务队列中的信息派发给worker来处理。
@@ -19,7 +20,7 @@ import time
 from celery import Celery
 from kombu import Queue, Exchange
 
-app = Celery('app',
+app = Celery('app_name',
              broker='pyamqp://test:test@127.0.0.1:5672//',
              backend='rpc://'
              )
@@ -29,15 +30,15 @@ app.conf.enable_utc = False
 app.conf.timezone = "Asia/Shanghai"
 
 # default Queue
-app.conf.task_default_queue = 'default_app'
+app.conf.task_default_queue = 'default_app_name'
 # default routing_key
-app.conf.task_default_routing_key = 'task.default_app'
+app.conf.task_default_routing_key = 'task.default_app_name'
 
 # task_routes
 app.conf.task_routes = {
     'practice.celery_use.use_rabbitmq.send_slow_task': {
-        'queue': 'default_app_slow',
-        'routing_key': 'app_slow.task.send_slow_task'
+        'queue': 'default_app_name_slow',
+        'routing_key': 'task.app_name_slow.send_slow_task'
     },
 }
 
@@ -46,14 +47,14 @@ app.conf.task_queues = (
     # The non-AMQP backends like Redis or SQS don’t support exchanges,
     # so they require the exchange to have the same name as the queue.
     Queue(
-        'default_app',
-        exchange=Exchange('default_app', type='topic'),
-        routing_key='app.task.#',
+        'default_app_name',
+        exchange=Exchange('tasks.default_app_name', type='topic'),
+        routing_key='task.default_app_name.#',
     ),
     Queue(
-        'default_app_slow',
-        exchange=Exchange('default_app_slow', type='topic'),
-        routing_key='app_slow.task.#',
+        'default_app_name_slow',
+        exchange=Exchange('tasks.default_app_name_slow', type='topic'),
+        routing_key='task.app_name_slow.#',
     ),
 )
 

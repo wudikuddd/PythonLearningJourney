@@ -16,7 +16,12 @@ client ---> 消息 --> Broker(消息队列) -----> 消息 ---> worker(celery运�
 
 启动worker和beat:
 
-celery -A app worker -l INFO -c 2 -B
+celery -A practice.celery_use.simple_use:app worker -l INFO -c 4 -B
+
+单独启动worker监听单个队列:
+! 注意: -B 参数只加在一个进程中，不然会引发重复执行，除非你需要这么做或你已经做处理
+celery -A practice.celery_use.simple_use:app worker -l INFO -c 2 -B -Q default_app
+celery -A practice.celery_use.simple_use:app worker -l INFO -c 2 -Q default_app_slow
 
 """
 import time

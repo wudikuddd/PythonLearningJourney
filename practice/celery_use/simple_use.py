@@ -8,18 +8,19 @@ client ---> 消息 --> Broker(消息队列) -----> 消息 ---> worker(celery运�
 消息队列(Message Queue), 也叫消息队列中间件, 简称消息中间件, 它是一个独立运行的程序, 表示在消息的传输过程中临时保存消息的容器。
 所谓的消息, 是指代在两台计算机或2个应用程序之间传送的数据。消息可以非常简单, 例如文本字符串或者数字, 也可以是更复杂的json数据或hash数据等。
 所谓的队列, 是一种先进先出、后进呼后出的数据结构, python中的list数据类型就可以很方便地用来实现队列结构。
-目前开发中, 使用较多的消息队列有RabbitMQ, Kafka, RocketMQ, MetaMQ, ZeroMQ, ActiveMQ等, 当然, 像redis、mysql、MongoDB, 也可以充当消息中间件, 但是相对而言, 没有上面那么专业和性能稳定。
+目前开发中, 使用较多的消息队列有RabbitMQ, Kafka, RocketMQ, MetaMQ, ZeroMQ, ActiveMQ等, 当然, 像redis、mysql、MongoDB,
+也可以充当消息中间件, 但是相对而言, 没有上面那么专业和性能稳定。
 
-并发任务10k以下的, 直接使用redis
-并发任务10k以上, 1000k以下的, 直接使用RabbitMQ
-并发任务1000k以上的, 直接使用RocketMQ
+并发任务10k以下的, 考虑使用redis做broker
+并发任务10k以上, 1000k以下的, 生产环境. 考虑使用RabbitMQ做broker
+并发任务1000k以上的, 考虑直接使用RocketMQ
 
 启动worker和beat:
 
 celery -A practice.celery_use.simple_use:app worker -l INFO -c 4 -B
 
 单独启动worker监听单个队列:
-! 注意: -B 参数只加在一个进程中，不然会引发重复执行，除非你需要这么做或你已经做处理
+! 注意: -B 参数只加在一个进程中，不然会引发重复执行，除非你需要这么做或你已经知道这么做的后果
 celery -A practice.celery_use.simple_use:app worker -l INFO -c 2 -B -Q default_app
 celery -A practice.celery_use.simple_use:app worker -l INFO -c 2 -Q default_app_slow
 
@@ -29,25 +30,26 @@ import time
 from celery import Celery
 from kombu import Queue, Exchange
 
-app = Celery('app',
+app = Celery('app_name',
              broker='redis://localhost:6379/5',
              backend='redis://localhost:6379/6'
              )
 app.conf.broker_connection_retry_on_startup = True
+
 # 时区设置
 app.conf.enable_utc = False
 app.conf.timezone = "Asia/Shanghai"
 
 # default Queue
-app.conf.task_default_queue = 'default_app'
+app.conf.task_default_queue = 'default_app_name'
 # default routing_key
-app.conf.task_default_routing_key = 'task.default_app'
+app.conf.task_default_routing_key = 'task.default_app_name'
 
 # task_routes
 app.conf.task_routes = {
     'practice.celery_use.simple_use.send_slow_task': {
-        'queue': 'default_app_slow',
-        'routing_key': 'app_slow.task.send_slow_task'
+        'queue': 'default_app_name_slow',
+        'routing_key': 'task.app_name_slow.send_slow_task'
     },
 }
 
@@ -56,21 +58,21 @@ app.conf.task_queues = (
     # The non-AMQP backends like Redis or SQS don’t support exchanges,
     # so they require the exchange to have the same name as the queue.
     Queue(
-        'default_app',
-        exchange=Exchange('default_app', type='topic'),
-        routing_key='app.task.#',
+        'default_app_name',
+        exchange=Exchange('default_app_name', type='topic'),
+        routing_key='task.default_app_name.#',
     ),
     Queue(
-        'default_app_slow',
-        exchange=Exchange('default_app_slow', type='topic'),
-        routing_key='app_slow.task.#',
+        'default_app_name_slow',
+        exchange=Exchange('default_app_name_slow', type='topic'),
+        routing_key='task.app_name_slow.#',
     ),
 )
 
 # 定时任务
 app.conf.beat_schedule = {
     'test_beat': {
-        'task': 'simple_use.test_beat',
+        'task': 'practice.celery_use.simple_use.test_beat',
         'schedule': 2,  # 每 2 秒运行
     },
 }

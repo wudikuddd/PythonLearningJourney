@@ -10,26 +10,57 @@ client ---> 消息 --> Broker(消息队列) -----> 消息 ---> worker(celery运�
 所谓的队列，是一种先进先出、后进呼后出的数据结构，python中的list数据类型就可以很方便地用来实现队列结构。
 目前开发中，使用较多的消息队列有RabbitMQ，Kafka，RocketMQ，MetaMQ，ZeroMQ，ActiveMQ等，当然，像redis、mysql、MongoDB，也可以充当消息中间件，但是相对而言，没有上面那么专业和性能稳定。
 
-并发任务10k以下的，直接使用redis
-并发任务10k以上，1000k以下的，直接使用RabbitMQ
-并发任务1000k以上的，直接使用RocketMQ
+并发任务10k以下的，考虑使用redis
+并发任务10k以上，1000k以下的，考虑使用RabbitMQ做broker
+并发任务1000k以上的，考虑直接使用RocketMQ
 """
 import time
 
 from celery import Celery
+from kombu import Queue, Exchange
 
-app = Celery('celery_test',
-             broker='redis://localhost:6379/5'
+app = Celery('app',
+             broker='pyamqp://test:test@127.0.0.1:5672//',
+             backend='rpc://'
              )
 app.conf.broker_connection_retry_on_startup = True
 # 时区设置
 app.conf.enable_utc = False
 app.conf.timezone = "Asia/Shanghai"
 
+# default Queue
+app.conf.task_default_queue = 'default_app'
+# default routing_key
+app.conf.task_default_routing_key = 'task.default_app'
 
+# task_routes
+app.conf.task_routes = {
+    'practice.celery_use.use_rabbitmq.send_slow_task': {
+        'queue': 'default_app_slow',
+        'routing_key': 'app_slow.task.send_slow_task'
+    },
+}
+
+# task_queues
+app.conf.task_queues = (
+    # The non-AMQP backends like Redis or SQS don’t support exchanges,
+    # so they require the exchange to have the same name as the queue.
+    Queue(
+        'default_app',
+        exchange=Exchange('default_app', type='topic'),
+        routing_key='app.task.#',
+    ),
+    Queue(
+        'default_app_slow',
+        exchange=Exchange('default_app_slow', type='topic'),
+        routing_key='app_slow.task.#',
+    ),
+)
+
+# 定时任务
 app.conf.beat_schedule = {
     'test_beat': {
-        'task': 'celery_test.test_beat',
+        'task': 'practice.celery_use.use_rabbitmq.test_beat',
         'schedule': 2,  # 每 2 秒运行
     },
 }
@@ -52,7 +83,15 @@ def send_email():
 @app.task()
 def send_sms():
     print('start send sms')
-    time.sleep(5)
+    time.sleep(3)
+    return 'ok'
+
+
+
+@app.task()
+def send_slow_task():  # 测试耗时任务
+    print('start send slow_task')
+    time.sleep(50)
     return 'ok'
 
 
